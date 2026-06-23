@@ -1,0 +1,9 @@
+date,campaign,channel,impressions,clicks,spend,revenue,conversions
+2026-01-01,Brand Awareness,Facebook,120000,2400,1800,5400,120
+2026-01-02,Brand Awareness,Facebook,110000,2100,1700,5100,115
+2026-01-01,Search Promo,Google Search,90000,4500,2500,9000,250
+2026-01-02,Search Promo,Google Search,95000,4700,2600,9300,260
+2026-01-01,Video Prospecting,DV360,200000,3000,4000,7600,180
+2026-01-02,Video Prospecting,DV360,210000,3200,4200,7900,190
+2026-01-01,Retargeting,TTD,80000,2800,2200,8800,240
+2026-01-02,Retargeting,TTD,85000,3000,2300,9100,255
