@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from utils import (
+    get_dataframe_summary,
+    get_column_info,
+    get_numeric_columns,
+    get_category_columns,
+    perform_group_analysis,
+    get_csv_download
+)
+
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
@@ -16,7 +25,7 @@ st.set_page_config(
 )
 
 st.title("📊 AI Analytics Assistant")
-st.write("Upload a CSV file and ask questions about your data.")
+st.write("Upload a CSV file, explore your data, and ask AI-powered questions.")
 
 if not api_key:
     st.error("OPENAI_API_KEY is missing. Please add it to your .env file.")
@@ -25,27 +34,6 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-
-
-def get_dataframe_summary(df: pd.DataFrame) -> str:
-    summary = f"""
-Dataset Summary:
-Rows: {df.shape[0]}
-Columns: {df.shape[1]}
-
-Column Names:
-{list(df.columns)}
-
-Data Types:
-{df.dtypes.to_string()}
-
-Missing Values:
-{df.isnull().sum().to_string()}
-
-First 5 Rows:
-{df.head().to_string()}
-"""
-    return summary
 
 
 def ask_ai(question: str, df: pd.DataFrame) -> str:
@@ -77,108 +65,157 @@ User question:
 
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    try:
+        df = pd.read_csv(uploaded_file)
 
-    st.success("File uploaded successfully!")
+        if df.empty:
+            st.error("The uploaded CSV file is empty.")
+            st.stop()
 
-    st.subheader("Dataset Preview")
-    st.dataframe(df.head(20), use_container_width=True)
+        st.success("File uploaded successfully!")
 
-    st.subheader("Basic Dataset Information")
+        numeric_columns = get_numeric_columns(df)
+        category_columns = get_category_columns(df)
 
-    col1, col2, col3 = st.columns(3)
+        with st.expander("Dataset Preview", expanded=True):
+            st.dataframe(df.head(20), use_container_width=True)
 
-    with col1:
-        st.metric("Rows", df.shape[0])
+        with st.expander("Basic Dataset Information", expanded=True):
+            col1, col2, col3, col4 = st.columns(4)
 
-    with col2:
-        st.metric("Columns", df.shape[1])
+            with col1:
+                st.metric("Rows", df.shape[0])
 
-    with col3:
-        st.metric("Missing Values", int(df.isnull().sum().sum()))
+            with col2:
+                st.metric("Columns", df.shape[1])
 
-    st.subheader("Column Data Types")
+            with col3:
+                st.metric("Missing Values", int(df.isnull().sum().sum()))
 
-    column_info = pd.DataFrame({
-        "Column": df.columns,
-        "Data Type": df.dtypes.astype(str).values,
-        "Missing Values": df.isnull().sum().values
-    })
+            with col4:
+                st.metric("Duplicate Rows", int(df.duplicated().sum()))
 
-    st.dataframe(column_info, use_container_width=True)
+        with st.expander("Column Information", expanded=True):
+            column_info = get_column_info(df)
+            st.dataframe(column_info, use_container_width=True)
 
-    numeric_columns = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
-    category_columns = df.select_dtypes(include=["object"]).columns.tolist()
+        with st.expander("Descriptive Statistics", expanded=True):
+            if numeric_columns:
+                st.dataframe(df[numeric_columns].describe(), use_container_width=True)
+            else:
+                st.info("No numeric columns found for descriptive statistics.")
 
-    st.subheader("Quick Analysis")
+        with st.expander("Quick Analysis", expanded=True):
+            if numeric_columns and category_columns:
+                selected_category = st.selectbox(
+                    "Group by category",
+                    category_columns
+                )
 
-    if numeric_columns and category_columns:
-        selected_category = st.selectbox(
-            "Group by category",
-            category_columns
-        )
+                selected_metric = st.selectbox(
+                    "Select metric",
+                    numeric_columns
+                )
 
-        selected_metric = st.selectbox(
-            "Select metric",
-            numeric_columns
-        )
+                aggregation = st.selectbox(
+                    "Select aggregation",
+                    ["sum", "average", "count", "min", "max"]
+                )
 
-        aggregation = st.selectbox(
-            "Select aggregation",
-            ["sum", "average", "count", "min", "max"]
-        )
+                result = perform_group_analysis(
+                    df=df,
+                    category_col=selected_category,
+                    metric_col=selected_metric,
+                    aggregation=aggregation
+                )
 
-        if aggregation == "sum":
-            result = df.groupby(selected_category)[selected_metric].sum()
-        elif aggregation == "average":
-            result = df.groupby(selected_category)[selected_metric].mean()
-        elif aggregation == "count":
-            result = df.groupby(selected_category)[selected_metric].count()
-        elif aggregation == "min":
-            result = df.groupby(selected_category)[selected_metric].min()
-        else:
-            result = df.groupby(selected_category)[selected_metric].max()
+                st.dataframe(result, use_container_width=True)
 
-        result = (
-            result
-            .sort_values(ascending=False)
-            .reset_index()
-        )
+                st.bar_chart(result.set_index(selected_category))
 
-        st.dataframe(result, use_container_width=True)
+                csv_data = get_csv_download(result)
 
-        st.bar_chart(result.set_index(selected_category))
+                st.download_button(
+                    label="Download Analysis Result as CSV",
+                    data=csv_data,
+                    file_name="analysis_result.csv",
+                    mime="text/csv"
+                )
 
-    else:
-        st.info("Need at least one text column and one numeric column for quick analysis.")
+            else:
+                st.info("Need at least one text column and one numeric column for quick analysis.")
 
-    if numeric_columns:
-        st.subheader("Quick Chart")
+        with st.expander("Charts", expanded=True):
+            if numeric_columns:
+                chart_type = st.selectbox(
+                    "Select chart type",
+                    ["Bar Chart", "Line Chart", "Histogram"]
+                )
 
-        selected_column = st.selectbox(
-            "Select a numeric column to visualize",
-            numeric_columns
-        )
+                selected_column = st.selectbox(
+                    "Select numeric column",
+                    numeric_columns,
+                    key="chart_column"
+                )
 
-        fig, ax = plt.subplots()
-        df[selected_column].plot(kind="bar", ax=ax)
-        ax.set_title(f"{selected_column} Values")
-        ax.set_xlabel("Row Number")
-        ax.set_ylabel(selected_column)
-        st.pyplot(fig)
+                fig, ax = plt.subplots()
 
-    st.subheader("Ask AI About Your Data")
+                if chart_type == "Bar Chart":
+                    df[selected_column].plot(kind="bar", ax=ax)
+                    ax.set_xlabel("Row Number")
+                    ax.set_ylabel(selected_column)
 
-    question = st.chat_input("Example: What cleaning steps would you recommend?")
+                elif chart_type == "Line Chart":
+                    df[selected_column].plot(kind="line", ax=ax)
+                    ax.set_xlabel("Row Number")
+                    ax.set_ylabel(selected_column)
 
-    if question:
-        with st.chat_message("user"):
-            st.write(question)
+                elif chart_type == "Histogram":
+                    df[selected_column].plot(kind="hist", ax=ax)
+                    ax.set_xlabel(selected_column)
 
-        with st.chat_message("assistant"):
-            with st.spinner("Analyzing your data..."):
-                answer = ask_ai(question, df)
-                st.write(answer)
+                ax.set_title(f"{chart_type} of {selected_column}")
+                st.pyplot(fig)
+
+            else:
+                st.info("No numeric columns available for charts.")
+
+        with st.expander("Correlation Analysis", expanded=True):
+            if len(numeric_columns) >= 2:
+                correlation = df[numeric_columns].corr()
+
+                st.dataframe(correlation, use_container_width=True)
+
+                fig, ax = plt.subplots()
+                cax = ax.matshow(correlation)
+
+                fig.colorbar(cax)
+
+                ax.set_xticks(range(len(correlation.columns)))
+                ax.set_yticks(range(len(correlation.columns)))
+
+                ax.set_xticklabels(correlation.columns, rotation=90)
+                ax.set_yticklabels(correlation.columns)
+
+                st.pyplot(fig)
+
+            else:
+                st.info("Need at least two numeric columns for correlation analysis.")
+
+        with st.expander("Ask AI About Your Data", expanded=True):
+            question = st.chat_input("Example: What cleaning steps would you recommend?")
+
+            if question:
+                with st.chat_message("user"):
+                    st.write(question)
+
+                with st.chat_message("assistant"):
+                    with st.spinner("Analyzing your data..."):
+                        answer = ask_ai(question, df)
+                        st.write(answer)
+
+    except Exception as e:
+        st.error(f"Something went wrong while reading the file: {e}")
 
 else:
     st.info("Upload a CSV file to get started.")
