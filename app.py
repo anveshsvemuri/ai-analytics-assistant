@@ -27,56 +27,7 @@ client = OpenAI(api_key=api_key)
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
 
-def calculate_health_score(df: pd.DataFrame) -> tuple[int, dict]:
-    total_cells = df.shape[0] * df.shape[1]
-    missing_cells = df.isnull().sum().sum()
-    missing_percentage = (missing_cells / total_cells) * 100 if total_cells > 0 else 0
-
-    duplicate_rows = df.duplicated().sum()
-    duplicate_percentage = (duplicate_rows / len(df)) * 100 if len(df) > 0 else 0
-
-    empty_columns = df.columns[df.isnull().all()].tolist()
-
-    score = 100
-
-    score -= min(missing_percentage, 40)
-    score -= min(duplicate_percentage, 30)
-    score -= len(empty_columns) * 10
-
-    score = max(0, int(score))
-
-    details = {
-        "missing_percentage": round(missing_percentage, 2),
-        "duplicate_rows": int(duplicate_rows),
-        "duplicate_percentage": round(duplicate_percentage, 2),
-        "empty_columns": empty_columns
-    }
-
-    return score, details
-
-
 def get_dataframe_summary(df: pd.DataFrame) -> str:
-    numeric_summary = "No numeric columns found."
-
-    if not df.select_dtypes(include="number").empty:
-        numeric_summary = df.describe().to_string()
-
-    categorical_summary = ""
-
-    categorical_columns = df.select_dtypes(include=["object", "category"]).columns
-
-    for col in categorical_columns:
-        top_values = df[col].value_counts().head(5).to_string()
-        categorical_summary += f"""
-Column: {col}
-Unique Values: {df[col].nunique()}
-Top Values:
-{top_values}
-
-"""
-
-    health_score, health_details = calculate_health_score(df)
-
     summary = f"""
 Dataset Summary:
 Rows: {df.shape[0]}
@@ -91,23 +42,8 @@ Data Types:
 Missing Values:
 {df.isnull().sum().to_string()}
 
-Duplicate Rows:
-{df.duplicated().sum()}
-
-Dataset Health Score:
-{health_score}/100
-
-Health Details:
-{health_details}
-
-Numeric Statistics:
-{numeric_summary}
-
-Categorical Summary:
-{categorical_summary}
-
-First 10 Rows:
-{df.head(10).to_string()}
+First 5 Rows:
+{df.head().to_string()}
 """
     return summary
 
@@ -116,7 +52,7 @@ def ask_ai(question: str, df: pd.DataFrame) -> str:
     summary = get_dataframe_summary(df)
 
     prompt = f"""
-You are a senior data analyst helping a business user understand a dataset.
+You are an expert data analyst.
 
 Use the dataset summary below to answer the user's question.
 Be clear, practical, and concise.
@@ -124,9 +60,8 @@ Be clear, practical, and concise.
 Important:
 - You only have access to the dataset summary and first 5 rows.
 - Do not claim you calculated totals unless the value is visible in the summary.
-- If the question requires full-dataset calculation, say that Pandas analysis is needed.
+- If the question requires full-dataset calculation, say Pandas analysis is needed.
 
-Dataset information:
 {summary}
 
 User question:
@@ -157,54 +92,32 @@ if uploaded_file is not None:
         st.subheader("Dataset Preview")
         st.dataframe(df.head(20), use_container_width=True)
 
-        with st.expander("Basic Dataset Information", expanded=True):
-            col1, col2, col3, col4 = st.columns(4)
-        st.subheader("Dataset Health Score")
-
-        health_score, health_details = calculate_health_score(df)
+        st.subheader("Basic Dataset Information")
 
         col1, col2, col3, col4 = st.columns(4)
 
-            with col1:
-                st.metric("Rows", df.shape[0])
         with col1:
-            st.metric("Health Score", f"{health_score}/100")
-
-        with col2:
-            st.metric("Missing %", f"{health_details['missing_percentage']}%")
-
-        with col3:
-            st.metric("Duplicate Rows", health_details["duplicate_rows"])
-
-        with col4:
-            st.metric("Empty Columns", len(health_details["empty_columns"]))
-
-        if health_score >= 85:
-            st.success("Dataset looks healthy overall.")
-        elif health_score >= 60:
-            st.warning("Dataset is usable but has some quality issues.")
-        else:
-            st.error("Dataset has significant quality issues and should be cleaned.")
-
-        st.subheader("Basic Dataset Information")
-
-        info_col1, info_col2, info_col3, info_col4 = st.columns(4)
-
-        with info_col1:
             st.metric("Rows", df.shape[0])
 
-            with col2:
-                st.metric("Columns", df.shape[1])
+        with col2:
+            st.metric("Columns", df.shape[1])
 
-            with col3:
-                st.metric("Missing Values", int(df.isnull().sum().sum()))
+        with col3:
+            st.metric("Missing Values", int(df.isnull().sum().sum()))
 
-            with col4:
-                st.metric("Duplicate Rows", int(df.duplicated().sum()))
+        with col4:
+            st.metric("Duplicate Rows", int(df.duplicated().sum()))
 
-        with st.expander("Column Information", expanded=True):
-            column_info = get_column_info(df)
-            st.dataframe(column_info, use_container_width=True)
+        st.subheader("Column Information")
+
+        column_info = pd.DataFrame({
+            "Column": df.columns,
+            "Data Type": df.dtypes.astype(str).values,
+            "Missing Values": df.isnull().sum().values,
+            "Missing %": (df.isnull().mean() * 100).round(2).values
+        })
+
+        st.dataframe(column_info, use_container_width=True)
 
         st.subheader("Descriptive Statistics")
 
@@ -317,33 +230,18 @@ if uploaded_file is not None:
         else:
             st.info("Need at least two numeric columns for correlation analysis.")
 
-        with st.expander("Ask AI About Your Data", expanded=True):
-            question = st.chat_input("Example: What cleaning steps would you recommend?")
         st.subheader("Ask AI About Your Data")
 
-        st.info(
-            """
-            Example questions you can ask:
-
-            - Summarize this dataset.
-            - What data quality issues do you notice?
-            - Which columns should I clean?
-            - Which visualizations would you recommend?
-            - Explain this dataset to a business user.
-            - What are the possible next analysis steps?
-            """
-        )
-
-        question = st.chat_input("Ask a question about your dataset")
+        question = st.chat_input("Example: What cleaning steps would you recommend?")
 
         if question:
             with st.chat_message("user"):
                 st.write(question)
 
-                with st.chat_message("assistant"):
-                    with st.spinner("Analyzing your data..."):
-                        answer = ask_ai(question, df)
-                        st.write(answer)
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing your data..."):
+                    answer = ask_ai(question, df)
+                    st.write(answer)
 
     except Exception as e:
         st.error(f"Something went wrong while reading the file: {e}")
