@@ -119,16 +119,12 @@ def ask_ai(question: str, df: pd.DataFrame) -> str:
 You are a senior data analyst helping a business user understand a dataset.
 
 Use the dataset summary below to answer the user's question.
+Be clear, practical, and concise.
 
-When answering:
-- Be clear and practical.
-- Use bullet points when helpful.
-- Identify data quality issues.
-- Suggest useful visualizations.
-- Mention limitations.
-- Recommend next analytical steps.
-- Do not claim you calculated full-dataset results unless the information is available in the summary.
-- If the user asks for exact totals, rankings, or calculations that require the full dataset, explain that Pandas-based analysis is needed.
+Important:
+- You only have access to the dataset summary and first 5 rows.
+- Do not claim you calculated totals unless the value is visible in the summary.
+- If the question requires full-dataset calculation, say that Pandas analysis is needed.
 
 Dataset information:
 {summary}
@@ -161,12 +157,16 @@ if uploaded_file is not None:
         st.subheader("Dataset Preview")
         st.dataframe(df.head(20), use_container_width=True)
 
+        with st.expander("Basic Dataset Information", expanded=True):
+            col1, col2, col3, col4 = st.columns(4)
         st.subheader("Dataset Health Score")
 
         health_score, health_details = calculate_health_score(df)
 
         col1, col2, col3, col4 = st.columns(4)
 
+            with col1:
+                st.metric("Rows", df.shape[0])
         with col1:
             st.metric("Health Score", f"{health_score}/100")
 
@@ -193,26 +193,18 @@ if uploaded_file is not None:
         with info_col1:
             st.metric("Rows", df.shape[0])
 
-        with info_col2:
-            st.metric("Columns", df.shape[1])
+            with col2:
+                st.metric("Columns", df.shape[1])
 
-        with info_col3:
-            st.metric("Missing Values", int(df.isnull().sum().sum()))
+            with col3:
+                st.metric("Missing Values", int(df.isnull().sum().sum()))
 
-        with info_col4:
-            st.metric("Duplicate Rows", int(df.duplicated().sum()))
+            with col4:
+                st.metric("Duplicate Rows", int(df.duplicated().sum()))
 
-        st.subheader("Column Information")
-
-        column_info = pd.DataFrame({
-            "Column": df.columns,
-            "Data Type": df.dtypes.astype(str).values,
-            "Missing Values": df.isnull().sum().values,
-            "Missing %": (df.isnull().mean() * 100).round(2).values,
-            "Unique Values": df.nunique().values
-        })
-
-        st.dataframe(column_info, use_container_width=True)
+        with st.expander("Column Information", expanded=True):
+            column_info = get_column_info(df)
+            st.dataframe(column_info, use_container_width=True)
 
         st.subheader("Descriptive Statistics")
 
@@ -325,6 +317,8 @@ if uploaded_file is not None:
         else:
             st.info("Need at least two numeric columns for correlation analysis.")
 
+        with st.expander("Ask AI About Your Data", expanded=True):
+            question = st.chat_input("Example: What cleaning steps would you recommend?")
         st.subheader("Ask AI About Your Data")
 
         st.info(
@@ -346,10 +340,10 @@ if uploaded_file is not None:
             with st.chat_message("user"):
                 st.write(question)
 
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing your data..."):
-                    answer = ask_ai(question, df)
-                    st.markdown(answer)
+                with st.chat_message("assistant"):
+                    with st.spinner("Analyzing your data..."):
+                        answer = ask_ai(question, df)
+                        st.write(answer)
 
     except Exception as e:
         st.error(f"Something went wrong while reading the file: {e}")
