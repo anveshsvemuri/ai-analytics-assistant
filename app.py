@@ -320,8 +320,39 @@ if uploaded_file is not None:
 
             with st.chat_message("assistant"):
                 with st.spinner("Analyzing your data..."):
-                    answer = ask_ai(question, df)
-                    st.write(answer)
+
+                    pandas_result = answer_with_pandas(question, df)
+
+                    if pandas_result is not None:
+                        st.write("Here is the calculated result from your dataset:")
+                        st.dataframe(pandas_result, use_container_width=True)
+
+                        if len(pandas_result.columns) >= 2:
+                            st.bar_chart(pandas_result.set_index(pandas_result.columns[0]))
+
+                        explanation_prompt = f"""
+        You are a senior data analyst.
+
+        The user asked:
+        {question}
+
+        The app calculated this result using Pandas:
+        {pandas_result.to_string(index=False)}
+
+        Explain the result clearly and briefly for a business user.
+        Mention that the result is based on the uploaded dataset.
+        """
+
+                        response = client.responses.create(
+                            model="gpt-4.1-mini",
+                            input=explanation_prompt
+                        )
+
+                        st.markdown(response.output_text)
+
+                    else:
+                        answer = ask_ai(question, df)
+                        st.markdown(answer)
 
     except Exception as e:
         st.error(f"Something went wrong while reading the file: {e}")
