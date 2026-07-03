@@ -125,7 +125,45 @@ def answer_with_pandas(question: str, df: pd.DataFrame):
         })
 
     return None
+def generate_ai_chart(question: str, df: pd.DataFrame):
+    columns = list(df.columns)
 
+    prompt = f"""
+You are a data visualization assistant.
+
+The user wants to create a chart from a dataset.
+
+Available columns:
+{columns}
+
+User request:
+{question}
+
+Return ONLY valid JSON in this format:
+
+{{
+  "chart_type": "bar",
+  "x_axis": "column_name",
+  "y_axis": "column_name"
+}}
+
+Rules:
+- chart_type must be one of: bar, line, histogram
+- Use only column names from the dataset.
+- For histogram, x_axis should be a numeric column and y_axis should be null.
+- Do not include explanation.
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    try:
+        chart_config = json.loads(response.output_text)
+        return chart_config
+    except json.JSONDecodeError:
+        return None
 
 
 def ask_ai(question: str, df: pd.DataFrame) -> str:
