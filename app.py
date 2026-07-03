@@ -21,7 +21,65 @@ st.write("Upload a CSV file, explore the data, and ask AI-powered questions.")
 if not api_key:
     st.error("OPENAI_API_KEY is missing. Please add it to your .env file.")
     st.stop()
+st.subheader("AI-Powered Chart Generator")
 
+chart_question = st.text_input(
+    "Ask AI to create a chart",
+    placeholder="Example: Show revenue by campaign"
+)
+
+if st.button("Generate AI Chart"):
+    if chart_question:
+        with st.spinner("Generating chart..."):
+            chart_config = generate_ai_chart(chart_question, df)
+
+            if chart_config is None:
+                st.error("Could not understand the chart request. Try again with clear column names.")
+            else:
+                chart_type = chart_config.get("chart_type")
+                x_axis = chart_config.get("x_axis")
+                y_axis = chart_config.get("y_axis")
+
+                if x_axis not in df.columns:
+                    st.error(f"Invalid x-axis column: {x_axis}")
+                elif y_axis is not None and y_axis not in df.columns:
+                    st.error(f"Invalid y-axis column: {y_axis}")
+                else:
+                    fig, ax = plt.subplots()
+
+                    if chart_type == "bar":
+                        chart_data = (
+                            df.groupby(x_axis)[y_axis]
+                            .sum()
+                            .sort_values(ascending=False)
+                            .head(10)
+                        )
+                        chart_data.plot(kind="bar", ax=ax)
+                        ax.set_xlabel(x_axis)
+                        ax.set_ylabel(y_axis)
+                        ax.set_title(f"{y_axis} by {x_axis}")
+
+                    elif chart_type == "line":
+                        df.plot(x=x_axis, y=y_axis, kind="line", ax=ax)
+                        ax.set_xlabel(x_axis)
+                        ax.set_ylabel(y_axis)
+                        ax.set_title(f"{y_axis} over {x_axis}")
+
+                    elif chart_type == "histogram":
+                        df[x_axis].plot(kind="hist", ax=ax)
+                        ax.set_xlabel(x_axis)
+                        ax.set_title(f"Distribution of {x_axis}")
+
+                    else:
+                        st.error("Unsupported chart type.")
+                        st.stop()
+
+                    st.pyplot(fig)
+
+                    st.write("Chart configuration used:")
+                    st.json(chart_config)
+    else:
+        st.warning("Please enter a chart request.")
 client = OpenAI(api_key=api_key)
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
