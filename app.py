@@ -223,6 +223,62 @@ Rules:
     except json.JSONDecodeError:
         return None
 
+def generate_data_quality_report(df: pd.DataFrame):
+    recommendations = []
+
+    # Missing values
+    missing = df.isnull().sum()
+
+    for col, count in missing.items():
+        if count > 0:
+            recommendations.append(
+                f"'{col}' has {count} missing values."
+            )
+
+    # Duplicate rows
+    duplicates = df.duplicated().sum()
+
+    if duplicates > 0:
+        recommendations.append(
+            f"The dataset contains {duplicates} duplicate rows."
+        )
+
+    # Numeric columns
+    numeric_columns = df.select_dtypes(include="number").columns
+
+    for col in numeric_columns:
+
+        if (df[col] < 0).any():
+            recommendations.append(
+                f"'{col}' contains negative values."
+            )
+
+    # Object columns
+    object_columns = df.select_dtypes(include="object").columns
+
+    for col in object_columns:
+
+        unique = df[col].nunique()
+
+        if unique > len(df) * 0.8:
+            recommendations.append(
+                f"'{col}' has very high cardinality."
+            )
+
+        try:
+            pd.to_datetime(df[col])
+            recommendations.append(
+                f"'{col}' appears to be a date column."
+            )
+        except:
+            pass
+
+    if len(recommendations) == 0:
+        recommendations.append(
+            "No major data quality issues detected."
+        )
+
+    return recommendations
 
 def ask_ai(question: str, df: pd.DataFrame) -> str:
     summary = get_dataframe_summary(df)
