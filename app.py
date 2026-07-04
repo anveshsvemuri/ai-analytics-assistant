@@ -349,9 +349,20 @@ if uploaded_file is not None:
             "Missing %": (df.isnull().mean() * 100).round(2).values
         })
 
-        st.dataframe(column_info, use_container_width=True)
 
-        st.subheader("Descriptive Statistics")
+
+        st.dataframe(column_info, use_container_width=True)
+        st.subheader("Data Quality Recommendations")
+
+        quality_report = generate_data_quality_report(df)
+
+        for item in quality_report:
+            if "No major" in item:
+                st.success(item)
+            else:
+                st.warning(item)
+
+            st.subheader("Descriptive Statistics")
 
         if numeric_columns:
             st.dataframe(df[numeric_columns].describe(), use_container_width=True)
