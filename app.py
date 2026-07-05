@@ -21,6 +21,45 @@ st.write("Upload a CSV file, explore the data, and ask AI-powered questions.")
 if not api_key:
     st.error("OPENAI_API_KEY is missing. Please add it to your .env file.")
     st.stop()
+
+
+st.subheader("AI-Powered Chart Generator")
+
+st.info(
+    """
+    Example chart requests:
+
+    - Show revenue by campaign
+    - Plot clicks by channel
+    - Create a histogram of spend
+    - Show impressions by campaign
+    """
+)
+
+chart_question = st.text_input(
+    "Ask AI to create a chart",
+    placeholder="Example: Show revenue by campaign"
+)
+
+if st.button("Generate AI Chart"):
+    if not chart_question:
+        st.warning("Please enter a chart request.")
+    else:
+        with st.spinner("Generating chart..."):
+            chart_config = generate_chart_config(chart_question, df)
+
+            if chart_config is None:
+                st.error("Could not understand the chart request. Please try again.")
+            else:
+                fig, error = create_ai_chart(chart_config, df)
+
+                if error:
+                    st.error(error)
+                    st.json(chart_config)
+                else:
+                    st.pyplot(fig)
+                    st.write("Chart configuration used:")
+                    st.json(chart_config)
 st.subheader("AI-Powered Chart Generator")
 
 chart_question = st.text_input(
@@ -83,7 +122,43 @@ if st.button("Generate AI Chart"):
 client = OpenAI(api_key=api_key)
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+st.subheader("AI-Powered Chart Generator")
 
+st.info(
+    """
+    Example chart requests:
+
+    - Show revenue by campaign
+    - Plot clicks by channel
+    - Create a histogram of spend
+    - Show impressions by campaign
+    """
+)
+
+chart_question = st.text_input(
+    "Ask AI to create a chart",
+    placeholder="Example: Show revenue by campaign"
+)
+
+if st.button("Generate AI Chart"):
+    if not chart_question:
+        st.warning("Please enter a chart request.")
+    else:
+        with st.spinner("Generating chart..."):
+            chart_config = generate_chart_config(chart_question, df)
+
+            if chart_config is None:
+                st.error("Could not understand the chart request. Please try again.")
+            else:
+                fig, error = create_ai_chart(chart_config, df)
+
+                if error:
+                    st.error(error)
+                    st.json(chart_config)
+                else:
+                    st.pyplot(fig)
+                    st.write("Chart configuration used:")
+                    st.json(chart_config)
 
 def get_dataframe_summary(df: pd.DataFrame) -> str:
     summary = f"""
