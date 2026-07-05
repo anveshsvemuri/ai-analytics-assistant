@@ -280,6 +280,46 @@ def generate_data_quality_report(df: pd.DataFrame):
 
     return recommendations
 
+def generate_chart_config(question: str, df: pd.DataFrame):
+    columns = list(df.columns)
+
+    prompt = f"""
+You are a data visualization assistant.
+
+Available dataset columns:
+{columns}
+
+User request:
+{question}
+
+Return ONLY valid JSON in this exact format:
+
+{{
+  "chart_type": "bar",
+  "x_axis": "column_name",
+  "y_axis": "column_name",
+  "aggregation": "sum"
+}}
+
+Rules:
+- chart_type must be one of: bar, line, histogram
+- aggregation must be one of: sum, average, count, none
+- Use only columns from the available dataset columns.
+- For histogram, y_axis must be null and aggregation must be none.
+- Do not include markdown.
+- Do not include explanation.
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    try:
+        return json.loads(response.output_text)
+    except json.JSONDecodeError:
+        return None
+    
 def ask_ai(question: str, df: pd.DataFrame) -> str:
     summary = get_dataframe_summary(df)
 
