@@ -62,7 +62,7 @@ def get_numeric_columns(df: pd.DataFrame) -> list[str]:
     return df.select_dtypes(include="number").columns.tolist()
 
 def get_category_columns(df: pd.DataFrame) -> list:
-    return df.select_dtypes(include=["object", "category"]).columns.tolist()
+    return df.select_dtypes(include=["object", "category", "string"]).columns.tolist()
 
 
 def perform_group_analysis(
