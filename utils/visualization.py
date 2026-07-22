@@ -51,7 +51,16 @@ def create_ai_chart(chart_config: dict, df: pd.DataFrame):
 
     if chart_type != "histogram" and y_axis not in df.columns:
         return None, f"Column '{y_axis}' does not exist in the dataset."
+    supported_aggregations = {"sum", "average", "count", "none"}
 
+    if aggregation not in supported_aggregations:
+        return None, f"Unsupported aggregation: {aggregation}"
+
+    if chart_type in {"bar", "line"}:
+        if not pd.api.types.is_numeric_dtype(df[y_axis]):
+            return None, (
+                f"'{y_axis}' must be a numeric column for a {chart_type} chart."
+            )
     fig, ax = plt.subplots()
 
     if chart_type == "histogram":
