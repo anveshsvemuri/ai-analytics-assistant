@@ -1,26 +1,25 @@
 import os
+
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from utils.data_loader import load_csv
+from utils.ai import ask_ai, generate_chart_config
 from utils.analytics import (
+    get_category_columns,
     get_column_info,
     get_numeric_columns,
-    get_category_columns,
-    perform_group_analysis
+    perform_group_analysis,
 )
-from utils.quality import (
-    calculate_health_score,
-    generate_data_quality_report
-)
+from utils.data_loader import load_csv
+from utils.local_analysis import answer_locally
+from utils.quality import calculate_health_score, generate_data_quality_report
 from utils.visualization import (
+    create_ai_chart,
     create_basic_chart,
     create_correlation_chart,
-    create_ai_chart
 )
-from utils.ai import ask_ai, generate_chart_config
 
 load_dotenv()
 
@@ -29,17 +28,18 @@ api_key = os.getenv("OPENAI_API_KEY")
 st.set_page_config(
     page_title="AI Analytics Assistant",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
 )
 
 st.title("📊 AI Analytics Assistant")
-st.write("Upload a CSV file, explore the data, and ask AI-powered questions.")
+st.write("Upload a CSV file, explore the data, and ask questions in local or AI mode.")
 
-if not api_key:
-    st.error("OPENAI_API_KEY is missing. Please add it to your .env file.")
-    st.stop()
-
-client = OpenAI(api_key=api_key)
+client = OpenAI(api_key=api_key) if api_key else None
+if client is None:
+    st.info(
+        "Running in local analytics mode. Add OPENAI_API_KEY to .env to enable "
+        "AI-generated charts and open-ended analysis."
+    )
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
@@ -119,26 +119,20 @@ if uploaded_file is not None:
         st.subheader("Quick Analysis")
 
         if numeric_columns and category_columns:
-            selected_category = st.selectbox(
-                "Group by category",
-                category_columns
-            )
+            selected_category = st.selectbox("Group by category", category_columns)
 
-            selected_metric = st.selectbox(
-                "Select metric",
-                numeric_columns
-            )
+            selected_metric = st.selectbox("Select metric", numeric_columns)
 
             aggregation = st.selectbox(
                 "Select aggregation",
-                ["sum", "average", "count", "min", "max"]
+                ["sum", "average", "count", "min", "max"],
             )
 
             result = perform_group_analysis(
                 df=df,
                 category_col=selected_category,
                 metric_col=selected_metric,
-                aggregation=aggregation
+                aggregation=aggregation,
             )
 
             st.dataframe(result, use_container_width=True)
@@ -151,7 +145,7 @@ if uploaded_file is not None:
                 label="Download Analysis Result as CSV",
                 data=csv_data,
                 file_name="analysis_result.csv",
-                mime="text/csv"
+                mime="text/csv",
             )
 
         else:
@@ -162,13 +156,13 @@ if uploaded_file is not None:
         if numeric_columns:
             chart_type = st.selectbox(
                 "Select chart type",
-                ["Bar Chart", "Line Chart", "Histogram"]
+                ["Bar Chart", "Line Chart", "Histogram"],
             )
 
             selected_column = st.selectbox(
                 "Select numeric column",
                 numeric_columns,
-                key="chart_column"
+                key="chart_column",
             )
 
             fig = create_basic_chart(df, chart_type, selected_column)
@@ -205,10 +199,11 @@ if uploaded_file is not None:
 
         chart_question = st.text_input(
             "Ask AI to create a chart",
-            placeholder="Example: Show revenue by campaign"
+            placeholder="Example: Show revenue by campaign",
+            disabled=client is None,
         )
 
-        if st.button("Generate AI Chart"):
+        if st.button("Generate AI Chart", disabled=client is None):
             if not chart_question:
                 st.warning("Please enter a chart request.")
             else:
@@ -228,18 +223,22 @@ if uploaded_file is not None:
                             st.write("Chart configuration used:")
                             st.json(chart_config)
 
-        st.subheader("Ask AI About Your Data")
+        if client is None:
+            st.caption("Set OPENAI_API_KEY to enable AI-generated chart configuration.")
+
+        st.subheader("Ask About Your Data")
 
         st.info(
             """
-            Example questions you can ask:
+            Local mode supports questions such as:
 
             - Summarize this dataset.
-            - What data quality issues do you notice?
-            - Which columns should I clean?
-            - Which visualizations would you recommend?
-            - Explain this dataset to a business user.
-            - What are the possible next analysis steps?
+            - What data quality issues are there?
+            - What is the total revenue?
+            - Show top campaign by revenue.
+            - Show the strongest correlation.
+
+            With an API key, open-ended AI analysis is also available.
             """
         )
 
@@ -251,7 +250,11 @@ if uploaded_file is not None:
 
             with st.chat_message("assistant"):
                 with st.spinner("Analyzing your data..."):
-                    answer = ask_ai(question, df, client)
+                    answer = (
+                        ask_ai(question, df, client)
+                        if client is not None
+                        else answer_locally(question, df)
+                    )
                     st.markdown(answer)
 
     except Exception as e:
