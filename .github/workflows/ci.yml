@@ -21,4 +21,4 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements-dev.txt
       - run: ruff check utils/data_loader.py utils/local_analysis.py tests
-      - run: pytest
+      - run: python -m pytest
