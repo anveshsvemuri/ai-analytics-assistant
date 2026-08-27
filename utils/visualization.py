@@ -1,5 +1,5 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 def create_basic_chart(df: pd.DataFrame, chart_type: str, selected_column: str):
@@ -56,11 +56,8 @@ def create_ai_chart(chart_config: dict, df: pd.DataFrame):
     if aggregation not in supported_aggregations:
         return None, f"Unsupported aggregation: {aggregation}"
 
-    if chart_type in {"bar", "line"}:
-        if not pd.api.types.is_numeric_dtype(df[y_axis]):
-            return None, (
-                f"'{y_axis}' must be a numeric column for a {chart_type} chart."
-            )
+    if chart_type in {"bar", "line"} and not pd.api.types.is_numeric_dtype(df[y_axis]):
+        return None, f"'{y_axis}' must be a numeric column for a {chart_type} chart."
     fig, ax = plt.subplots()
 
     if chart_type == "histogram":

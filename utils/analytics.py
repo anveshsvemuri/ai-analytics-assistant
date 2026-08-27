@@ -8,7 +8,7 @@ def get_dataframe_summary(df: pd.DataFrame) -> str:
         numeric_summary = df.describe().to_string()
 
     categorical_summary = ""
-    categorical_columns = df.select_dtypes(include=["object", "category"]).columns
+    categorical_columns = df.select_dtypes(include=["object", "category", "string"]).columns
 
     for col in categorical_columns:
         top_values = df[col].value_counts().head(5).to_string()

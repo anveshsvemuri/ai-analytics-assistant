@@ -6,19 +6,11 @@ Available dataset columns:
 User request:
 {question}
 
-Return ONLY valid JSON in this exact format:
-
-{{
-  "chart_type": "bar",
-  "x_axis": "column_name",
-  "y_axis": "column_name",
-  "aggregation": "sum"
-}}
+Return a chart configuration matching the provided structured response schema.
 
 Rules:
 - chart_type must be one of: bar, line, histogram
 - aggregation must be one of: sum, average, count, none
 - Use only columns from the available dataset columns.
 - For histogram, y_axis must be null and aggregation must be none.
-- Do not include markdown.
-- Do not include explanation.
+- Do not include commentary outside the structured response.

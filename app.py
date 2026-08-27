@@ -1,11 +1,10 @@
 import os
 
-import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from utils.ai import ask_ai, generate_chart_config
+from utils.ai import AIAnalyticsError, ask_ai, generate_chart_config
 from utils.analytics import (
     get_category_columns,
     get_column_info,
@@ -34,7 +33,7 @@ st.set_page_config(
 st.title("📊 AI Analytics Assistant")
 st.write("Upload a CSV file, explore the data, and ask questions in local or AI mode.")
 
-client = OpenAI(api_key=api_key) if api_key else None
+client = OpenAI(api_key=api_key, max_retries=2, timeout=30.0) if api_key else None
 if client is None:
     st.info(
         "Running in local analytics mode. Add OPENAI_API_KEY to .env to enable "
@@ -208,13 +207,9 @@ if uploaded_file is not None:
                 st.warning("Please enter a chart request.")
             else:
                 with st.spinner("Generating chart..."):
-                    chart_config = generate_chart_config(chart_question, df, client)
-
-                    if chart_config is None:
-                        st.error("Could not understand the chart request. Please try again.")
-                    else:
+                    try:
+                        chart_config = generate_chart_config(chart_question, df, client)
                         fig, error = create_ai_chart(chart_config, df)
-
                         if error:
                             st.error(error)
                             st.json(chart_config)
@@ -222,6 +217,8 @@ if uploaded_file is not None:
                             st.pyplot(fig)
                             st.write("Chart configuration used:")
                             st.json(chart_config)
+                    except AIAnalyticsError as error:
+                        st.error(str(error))
 
         if client is None:
             st.caption("Set OPENAI_API_KEY to enable AI-generated chart configuration.")
@@ -248,17 +245,19 @@ if uploaded_file is not None:
             with st.chat_message("user"):
                 st.write(question)
 
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing your data..."):
+            with st.chat_message("assistant"), st.spinner("Analyzing your data..."):
+                try:
                     answer = (
                         ask_ai(question, df, client)
                         if client is not None
                         else answer_locally(question, df)
                     )
                     st.markdown(answer)
+                except AIAnalyticsError as error:
+                    st.error(str(error))
 
-    except Exception as e:
-        st.error(f"Something went wrong: {e}")
+    except Exception as error:  # noqa: BLE001 - UI boundary must remain recoverable
+        st.error(f"Something went wrong: {error}")
 
 else:
     st.info("Upload a CSV file to get started.")

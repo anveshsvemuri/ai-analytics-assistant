@@ -9,6 +9,8 @@ A Streamlit application that helps business users profile CSV datasets, investig
 - Automated profiling, health scoring, and quality recommendations
 - Deterministic grouped analysis, chart generation, and natural-language answers
 - Prompt-driven dataset explanations and chart configuration
+- Schema-validated AI answers and chart specifications
+- Bounded AI prompts with provider retry, timeout, and friendly error handling
 - Continuous integration for ingestion and local-analysis behavior
 
 ## Tech stack
@@ -53,7 +55,7 @@ Use `sample_data/campaigns.csv` or `sample_data/sales_data.csv` to explore the a
 
 ```bash
 pip install -r requirements-dev.txt
-ruff check utils/data_loader.py utils/local_analysis.py tests
+ruff check app.py utils tests
 python -m pytest
 ```
 
@@ -62,7 +64,7 @@ python -m pytest
 - [x] Modularize analytics, quality, AI, and visualization logic
 - [x] Add guarded CSV ingestion and automated tests
 - [x] Allow deterministic analysis without an API key
-- [ ] Add structured OpenAI outputs and retry/error handling
+- [x] Add structured OpenAI outputs and retry/error handling
 - [ ] Expand analytics and chart test coverage
 - [ ] Add one-click sample-data loading and deployment documentation
 - [ ] Add screenshots and a short demo

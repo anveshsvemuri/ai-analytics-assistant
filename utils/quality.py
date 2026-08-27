@@ -47,7 +47,7 @@ def generate_data_quality_report(df: pd.DataFrame) -> list:
         if (df[col] < 0).any():
             recommendations.append(f"'{col}' contains negative values.")
 
-    object_columns = df.select_dtypes(include="object").columns
+    object_columns = df.select_dtypes(include=["object", "string"]).columns
 
     for col in object_columns:
         unique = df[col].nunique()
@@ -55,11 +55,13 @@ def generate_data_quality_report(df: pd.DataFrame) -> list:
         if unique > len(df) * 0.8:
             recommendations.append(f"'{col}' has very high cardinality.")
 
-        try:
-            pd.to_datetime(df[col], errors="raise")
-            recommendations.append(f"'{col}' appears to be a date column.")
-        except Exception:
-            pass
+        date_hint = any(token in str(col).lower() for token in ("date", "time", "timestamp"))
+        if date_hint:
+            try:
+                pd.to_datetime(df[col], errors="raise", format="mixed")
+                recommendations.append(f"'{col}' appears to be a date column.")
+            except (TypeError, ValueError):
+                pass
 
     if not recommendations:
         recommendations.append("No major data quality issues detected.")
