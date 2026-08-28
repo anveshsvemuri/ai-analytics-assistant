@@ -11,7 +11,8 @@ A Streamlit application that helps business users profile CSV datasets, investig
 - Prompt-driven dataset explanations and chart configuration
 - Schema-validated AI answers and chart specifications
 - Bounded AI prompts with provider retry, timeout, and friendly error handling
-- Continuous integration for ingestion and local-analysis behavior
+- One-click synthetic sample datasets for a no-setup product demo
+- Continuous integration for ingestion, analytics, AI boundaries, and visualization behavior
 
 ## Tech stack
 
@@ -49,7 +50,12 @@ Uploads must be valid UTF-8 CSV files no larger than 25 MB, 200,000 rows, or 200
 
 ## Sample datasets
 
-Use `sample_data/campaigns.csv` or `sample_data/sales_data.csv` to explore the application without preparing a file.
+The app opens in sample mode. Select **Marketing campaign performance** or **Regional product
+sales** to explore profiling, quality checks, deterministic questions, and charts immediately. Switch
+to **Upload a CSV** when you are ready to analyze your own data.
+
+See [docs/demo.md](docs/demo.md) for a recruiter-friendly walkthrough and
+[docs/deployment.md](docs/deployment.md) for Streamlit Community Cloud deployment.
 
 ## Test
 
@@ -65,6 +71,7 @@ python -m pytest
 - [x] Add guarded CSV ingestion and automated tests
 - [x] Allow deterministic analysis without an API key
 - [x] Add structured OpenAI outputs and retry/error handling
-- [ ] Expand analytics and chart test coverage
-- [ ] Add one-click sample-data loading and deployment documentation
-- [ ] Add screenshots and a short demo
+- [x] Expand analytics and chart test coverage
+- [x] Add one-click sample-data loading and deployment documentation
+- [x] Add a short demo walkthrough
+- [ ] Add a hosted demo URL and authentic screenshots after deployment

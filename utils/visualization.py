@@ -3,6 +3,14 @@ import pandas as pd
 
 
 def create_basic_chart(df: pd.DataFrame, chart_type: str, selected_column: str):
+    supported_types = {"Bar Chart", "Line Chart", "Histogram"}
+    if chart_type not in supported_types:
+        raise ValueError(f"Unsupported chart type: {chart_type}")
+    if selected_column not in df.columns:
+        raise ValueError(f"Column '{selected_column}' does not exist in the dataset.")
+    if not pd.api.types.is_numeric_dtype(df[selected_column]):
+        raise ValueError(f"'{selected_column}' must be a numeric column.")
+
     fig, ax = plt.subplots()
 
     if chart_type == "Bar Chart":
@@ -25,6 +33,9 @@ def create_basic_chart(df: pd.DataFrame, chart_type: str, selected_column: str):
 
 
 def create_correlation_chart(correlation: pd.DataFrame):
+    if correlation.empty:
+        raise ValueError("Correlation data is empty.")
+
     fig, ax = plt.subplots()
     cax = ax.matshow(correlation)
     fig.colorbar(cax)

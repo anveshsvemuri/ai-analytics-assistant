@@ -47,3 +47,20 @@ def test_load_csv_rejects_excessive_columns(monkeypatch):
 
     with pytest.raises(ValueError, match="2-column analysis limit"):
         data_loader.load_csv(csv_stream("a,b,c\n1,2,3\n"))
+
+
+def test_load_sample_csv_uses_guarded_repository_catalog(tmp_path):
+    sample = tmp_path / "campaigns.csv"
+    sample.write_text("campaign,revenue\nSearch,250\nSocial,80\n", encoding="utf-8")
+
+    result = data_loader.load_sample_csv("Marketing campaign performance", tmp_path)
+
+    assert result.to_dict(orient="records") == [
+        {"campaign": "Search", "revenue": 250},
+        {"campaign": "Social", "revenue": 80},
+    ]
+
+
+def test_load_sample_csv_rejects_names_outside_catalog(tmp_path):
+    with pytest.raises(ValueError, match="Unknown sample dataset"):
+        data_loader.load_sample_csv("../../secrets", tmp_path)

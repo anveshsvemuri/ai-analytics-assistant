@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import BinaryIO
 
 import pandas as pd
@@ -9,6 +10,11 @@ import pandas as pd
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_ROWS = 200_000
 MAX_COLUMNS = 200
+SAMPLE_DATASETS = {
+    "Marketing campaign performance": "campaigns.csv",
+    "Regional product sales": "sales_data.csv",
+}
+SAMPLE_DATA_ROOT = Path(__file__).resolve().parents[1] / "sample_data"
 
 
 def _stream_size(uploaded_file: BinaryIO) -> int | None:
@@ -63,3 +69,17 @@ def load_csv(uploaded_file: BinaryIO) -> pd.DataFrame:
         raise ValueError("The CSV contains one or more blank column names.")
 
     return dataframe
+
+
+def load_sample_csv(name: str, sample_root: Path = SAMPLE_DATA_ROOT) -> pd.DataFrame:
+    """Load one repository-owned sample through the same guarded CSV path."""
+    try:
+        filename = SAMPLE_DATASETS[name]
+    except KeyError as exc:
+        raise ValueError(f"Unknown sample dataset: {name}") from exc
+
+    sample_path = sample_root / filename
+    if not sample_path.is_file():
+        raise ValueError(f"Sample dataset is unavailable: {name}")
+    with sample_path.open("rb") as sample_file:
+        return load_csv(sample_file)

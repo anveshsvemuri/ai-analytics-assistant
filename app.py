@@ -11,7 +11,7 @@ from utils.analytics import (
     get_numeric_columns,
     perform_group_analysis,
 )
-from utils.data_loader import load_csv
+from utils.data_loader import SAMPLE_DATASETS, load_csv, load_sample_csv
 from utils.local_analysis import answer_locally
 from utils.quality import calculate_health_score, generate_data_quality_report
 from utils.visualization import (
@@ -40,19 +40,38 @@ if client is None:
         "AI-generated charts and open-ended analysis."
     )
 
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+data_source = st.radio(
+    "Choose a data source",
+    ["Try a sample dataset", "Upload a CSV"],
+    horizontal=True,
+)
+selected_sample = None
+uploaded_file = None
+if data_source == "Try a sample dataset":
+    selected_sample = st.selectbox("Sample dataset", list(SAMPLE_DATASETS))
+    st.caption("Sample data is synthetic and safe to explore locally or in a public demo.")
+else:
+    uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
-if uploaded_file is not None:
+if selected_sample is not None or uploaded_file is not None:
     try:
-        df = load_csv(uploaded_file)
+        df = (
+            load_sample_csv(selected_sample)
+            if selected_sample is not None
+            else load_csv(uploaded_file)
+        )
 
-        st.success("File uploaded successfully!")
+        st.success(
+            f"Loaded sample: {selected_sample}"
+            if selected_sample is not None
+            else "File uploaded successfully!"
+        )
 
         numeric_columns = get_numeric_columns(df)
         category_columns = get_category_columns(df)
 
         st.subheader("Dataset Preview")
-        st.dataframe(df.head(20), use_container_width=True)
+        st.dataframe(df.head(20), width="stretch")
 
         st.subheader("Dataset Health Score")
 
@@ -97,7 +116,7 @@ if uploaded_file is not None:
 
         st.subheader("Column Information")
         column_info = get_column_info(df)
-        st.dataframe(column_info, use_container_width=True)
+        st.dataframe(column_info, width="stretch")
 
         st.subheader("Data Quality Recommendations")
         quality_report = generate_data_quality_report(df)
@@ -111,7 +130,7 @@ if uploaded_file is not None:
         st.subheader("Descriptive Statistics")
 
         if numeric_columns:
-            st.dataframe(df[numeric_columns].describe(), use_container_width=True)
+            st.dataframe(df[numeric_columns].describe(), width="stretch")
         else:
             st.info("No numeric columns found for descriptive statistics.")
 
@@ -134,7 +153,7 @@ if uploaded_file is not None:
                 aggregation=aggregation,
             )
 
-            st.dataframe(result, use_container_width=True)
+            st.dataframe(result, width="stretch")
 
             st.bar_chart(result.set_index(selected_category))
 
@@ -175,7 +194,7 @@ if uploaded_file is not None:
         if len(numeric_columns) >= 2:
             correlation = df[numeric_columns].corr()
 
-            st.dataframe(correlation, use_container_width=True)
+            st.dataframe(correlation, width="stretch")
 
             fig = create_correlation_chart(correlation)
             st.pyplot(fig)
