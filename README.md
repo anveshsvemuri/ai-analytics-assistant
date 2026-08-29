@@ -12,7 +12,7 @@ A Streamlit application that helps business users profile CSV datasets, investig
 - Schema-validated AI answers and chart specifications
 - Bounded AI prompts with provider retry, timeout, and friendly error handling
 - One-click synthetic sample datasets for a no-setup product demo
-- Continuous integration for ingestion, analytics, AI boundaries, and visualization behavior
+- Continuous integration for ingestion, analytics, AI boundaries, visualizations, and the real UI
 
 ## Tech stack
 
@@ -64,6 +64,10 @@ pip install -r requirements-dev.txt
 ruff check app.py utils tests
 python -m pytest
 ```
+
+The suite includes Streamlit application tests that open the real entry point, switch between both
+sample datasets, exercise a deterministic chat question, and verify the upload state. CI installs the
+same pinned production dependencies used for deployment and runs `pip check` before testing.
 
 ## Roadmap
 

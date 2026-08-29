@@ -32,5 +32,6 @@ error and the deterministic analytics remain usable.
 - CSV upload limits and error messages remain active
 - Local questions return deterministic results
 - Basic and correlation charts render
+- `pip check`, Ruff, pytest, and Streamlit AppTest pass in CI
 - Repository link and privacy wording are visible in the README
 - Secrets are absent from source, logs, and screenshots
