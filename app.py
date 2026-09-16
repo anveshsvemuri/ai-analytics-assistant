@@ -12,6 +12,7 @@ from utils.analytics import (
     perform_group_analysis,
 )
 from utils.data_loader import SAMPLE_DATASETS, load_csv, load_sample_csv
+from utils.insights import generate_insight_recommendations
 from utils.local_analysis import answer_locally
 from utils.quality import calculate_health_score, generate_data_quality_report
 from utils.visualization import (
@@ -126,6 +127,18 @@ if selected_sample is not None or uploaded_file is not None:
                 st.success(item)
             else:
                 st.warning(item)
+
+        st.subheader("Automated Insight Recommendations")
+        st.caption(
+            "Deterministic recommendations run without an API key, so the public demo still shows useful business and data-quality guidance."
+        )
+        for insight in generate_insight_recommendations(df):
+            if insight.severity == "high":
+                st.error(insight.as_markdown())
+            elif insight.severity == "medium":
+                st.warning(insight.as_markdown())
+            else:
+                st.success(insight.as_markdown())
 
         st.subheader("Descriptive Statistics")
 
